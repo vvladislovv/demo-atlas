@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Этап 0: что и зачем</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="story.css">
+</head>
+<body class="story">
+<header class="s-top">
+  <a class="s-back" href="index.html">Вернуться к стенду</a>
+  <button class="theme-btn" id="themeBtn" type="button" aria-label="Сменить тему"></button>
+</header>
+
+<main class="s-wrap">
+  <section class="s-hero">
+    <h1>Этап 0: что приходит, что делаем, что вы получаете</h1>
+    <p class="lead">Две–три недели работы над платёжным контуром и письменное заключение в конце. Ниже схема на одной картинке и каждый экран стенда с ответом на вопрос «зачем это вам».</p>
+  </section>
+
+  <section class="poster" id="poster" aria-label="Схема Этапа 0">
+    <div class="p-row">
+      <div class="p-col">
+        <h2>Что приходит</h2>
+        <ul>
+          <li>Код пилота и доступ к репозиторию после подписания NDA</li>
+          <li>Схема платёжного сервиса и онлайн-кассы</li>
+          <li>Ваши вопросы: что тревожит, что нельзя сломать</li>
+        </ul>
+      </div>
+      <div class="p-arrow" aria-hidden="true"><svg viewBox="0 0 48 24"><path d="M2 12h38M31 4l9 8-9 8"/></svg></div>
+      <div class="p-col mid">
+        <h2>Что делает команда</h2>
+        <ul>
+          <li>Рисует карту денег от заказа до сверки</li>
+          <li>Проверяет код по чек-листу: платежи, чеки, выплаты, ключи, персональные данные</li>
+          <li>Собирает схему системы для релиза и состав команды</li>
+          <li>Считает бюджет в трёх сценариях</li>
+        </ul>
+      </div>
+      <div class="p-arrow" aria-hidden="true"><svg viewBox="0 0 48 24"><path d="M2 12h38M31 4l9 8-9 8"/></svg></div>
+      <div class="p-col out">
+        <h2>Что вы получаете</h2>
+        <ul>
+          <li>Письменное заключение за 2–3 недели</li>
+          <li>Список находок с уровнем и оценкой в часах</li>
+          <li>Решение: что оставить, что переписать</li>
+          <li>Риски и условия остановки</li>
+        </ul>
+      </div>
+    </div>
+    <div class="p-foot"><b>Что решаете вы.</b> Выбрать формат дальше: адвайзер, адвайзер с командой или полный релиз. Или остановиться на заключении, это тоже нормальный исход.</div>
+  </section>
+
+  <div class="s-blocks">
+    <article class="s-block">
+      <div class="s-text">
+        <h2>Карта денег</h2>
+        <p>Путь платежа от заказа до сверки, шесть звеньев. У каждого статус: в порядке, есть риск или проверки нет. Нажмите на звено и увидите, что проверяем и как это ломается.</p>
+        <p class="why"><b>Зачем.</b> Вы сразу видите, где риск, ещё до разговора о цене.</p>
+        <a class="btn sm" href="index.html#map">Открыть экран</a>
+      </div>
+      <figure class="shot"><div class="chrome"><i></i><i></i><i></i></div><img src="shots/s-map.webp" alt="Экран «Карта денег»" loading="lazy"></figure>
+    </article>
+
+    <article class="s-block">
+      <div class="s-text">
+        <h2>Журнал и повторы</h2>
+        <p>Провайдер присылает одно уведомление дважды. С защитой деньги приходят один раз, без неё дважды. Дубль исправляется новой строкой, старые строки не меняются.</p>
+        <p class="why"><b>Зачем.</b> Деньги не зачисляются дважды, а расхождение видно сразу.</p>
+        <a class="btn sm" href="index.html#ledger">Открыть экран</a>
+      </div>
+      <figure class="shot"><div class="chrome"><i></i><i></i><i></i></div><img src="shots/s-ledger.webp" alt="Экран «Журнал и повторы»" loading="lazy"></figure>
+    </article>
+
+    <article class="s-block">
+      <div class="s-text">
+        <h2>Чеки и возвраты</h2>
+        <p>Оплата даёт чек, возврат даёт чек возврата со ссылкой на исходный. Если касса не отвечает, чек встаёт в очередь на повтор и попадает в отчёт.</p>
+        <p class="why"><b>Зачем.</b> Оплата без чека не теряется незаметно. Это требование 54-ФЗ.</p>
+        <a class="btn sm" href="index.html#receipts">Открыть экран</a>
+      </div>
+      <figure class="shot"><div class="chrome"><i></i><i></i><i></i></div><img src="shots/s-receipts.webp" alt="Экран «Чеки и возвраты»" loading="lazy"></figure>
+    </article>
+
+    <article class="s-block">
+      <div class="s-text">
+        <h2>Выплаты самозанятым</h2>
+        <p>Заказ делится на исполнителя, комиссию провайдера и платформу. Выплата не уходит без чека самозанятого и не запускается второй раз.</p>
+        <p class="why"><b>Зачем.</b> Исполнитель получает деньги один раз и по правилам, у вас есть чек.</p>
+        <a class="btn sm" href="index.html#payouts">Открыть экран</a>
+      </div>
+      <figure class="shot"><div class="chrome"><i></i><i></i><i></i></div><img src="shots/s-payouts.webp" alt="Экран «Выплаты самозанятым»" loading="lazy"></figure>
+    </article>
+
+    <article class="s-block">
+      <div class="s-text">
+        <h2>Сверка</h2>
+        <p>Ваша база рядом с выгрузкой провайдера. Три расхождения: другой статус, другая сумма, платёж потерялся. По каждому причина и действие.</p>
+        <p class="why"><b>Зачем.</b> Расхождение находится за день, а не на закрытии месяца.</p>
+        <a class="btn sm" href="index.html#recon">Открыть экран</a>
+      </div>
+      <figure class="shot"><div class="chrome"><i></i><i></i><i></i></div><img src="shots/s-recon.webp" alt="Экран «Сверка»" loading="lazy"></figure>
+    </article>
+
+    <article class="s-block">
+      <div class="s-text">
+        <h2>Отчёт ревью</h2>
+        <p>Образец заключения. Находки с уровнем, исправлением и оценкой в часах, внизу вердикт: что оставить, что дорабатывать, что переписать.</p>
+        <p class="why"><b>Зачем.</b> Решения принимаются по часам и уровням, а не по ощущениям.</p>
+        <a class="btn sm" href="index.html#report">Открыть экран</a>
+      </div>
+      <figure class="shot"><div class="chrome"><i></i><i></i><i></i></div><img src="shots/s-report.webp" alt="Экран «Отчёт ревью»" loading="lazy"></figure>
+    </article>
+
+    <article class="s-block">
+      <div class="s-text">
+        <h2>Кабинет проекта</h2>
+        <p>Задачи Этапа 0 по неделям: что готово, что в работе, что не начато. Фильтр показывает только невыполненное.</p>
+        <p class="why"><b>Зачем.</b> Вы видите ход работы сами и не спрашиваете «как дела».</p>
+        <a class="btn sm" href="index.html#cabinet">Открыть экран</a>
+      </div>
+      <figure class="shot"><div class="chrome"><i></i><i></i><i></i></div><img src="shots/s-cabinet.webp" alt="Экран «Кабинет проекта»" loading="lazy"></figure>
+    </article>
+  </div>
+
+  <section class="s-end">
+    <h2>Что дальше</h2>
+    <ul class="s-next">
+      <li><b>NDA.</b> Подписываем, после этого вы открываете код и схему.</li>
+      <li><b>Выбор формата.</b> Адвайзер, адвайзер с командой или полный релиз. Состав и цены в коммерческом предложении.</li>
+      <li><b>Старт Этапа 0.</b> Ноябрь. Заключение в конце третьей недели.</li>
+    </ul>
+    <p class="sub">Данные на всех экранах вымышленные. К вашему коду они отношения не имеют.</p>
+  </section>
+</main>
+<script>
+(function(){
+  var btn=document.getElementById('themeBtn');
+  function ico(d){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+d+'</svg>';}
+  var sun=ico('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>');
+  var moon=ico('<path d="M20 14.5A8 8 0 019.5 4 8 8 0 1020 14.5z"/>');
+  function apply(t){var r=document.documentElement;if(t)r.setAttribute('data-theme',t);else r.removeAttribute('data-theme');
+    var dark=t?t==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;
+    btn.innerHTML=(dark?sun:moon)+'<span>'+(dark?'Светлая тема':'Тёмная тема')+'</span>';}
+  var s=null;try{s=localStorage.getItem('stend-theme');}catch(e){}
+  apply(s);
+  btn.addEventListener('click',function(){var r=document.documentElement;
+    var cur=r.getAttribute('data-theme')||(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+    var n=cur==='dark'?'light':'dark';apply(n);try{localStorage.setItem('stend-theme',n);}catch(e){}});
+})();
+</script>
+</body>
+</html>
