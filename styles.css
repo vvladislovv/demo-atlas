@@ -198,7 +198,7 @@ a{color:inherit}
 .board .pill.risk{background:rgba(244,176,66,.16);color:#F7C265}
 .board .pill.none{color:#9FB3CB;border-color:#5C7391}
 .track{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));position:relative;margin-top:40px}
-.coin{position:absolute;top:19px;left:8.33%;width:10px;height:10px;margin-left:-5px;border-radius:50%;background:#fff;box-shadow:0 0 0 3px rgba(25,211,162,.25),0 0 18px 6px rgba(25,211,162,.7);z-index:3;animation:coin 7.5s cubic-bezier(.45,.05,.55,.95) infinite;pointer-events:none}
+.coin{position:absolute;top:19px;left:8.33%;width:10px;height:10px;margin-left:-5px;border-radius:50%;background:#fff;box-shadow:0 0 0 3px rgba(25,211,162,.25),0 0 18px 6px rgba(25,211,162,.7);z-index:1;animation:coin 7.5s cubic-bezier(.45,.05,.55,.95) infinite;pointer-events:none}
 @keyframes coin{0%{left:8.33%;opacity:0}7%{opacity:1}93%{opacity:1}100%{left:91.66%;opacity:0}}
 .st{position:relative;display:flex;flex-direction:column;align-items:center;gap:12px;background:none;border:0;color:inherit;cursor:pointer;padding:0 6px 12px;text-align:center;--c:#6F86A3;border-radius:12px}
 .st.s-ok{--c:#19D3A2}.st.s-risk{--c:#F4B042}.st.s-none{--c:#6F86A3}
@@ -209,7 +209,7 @@ a{color:inherit}
 .st .txt{display:flex;flex-direction:column;align-items:center;gap:8px}
 .st .txt b{font-family:var(--f-head);font-weight:600;font-size:16.5px;line-height:1.15}
 .st[aria-pressed="true"] .txt b{color:#fff}
-.st:not(:last-child)::after{content:"";position:absolute;left:50%;top:21px;width:100%;height:4px;border-radius:2px;z-index:1}
+.st:not(:last-child)::after{content:"";position:absolute;left:50%;top:21px;width:100%;height:4px;border-radius:2px;z-index:0}
 .st.g-ok:not(:last-child)::after{background:repeating-linear-gradient(90deg,#19D3A2 0 12px,#79F0D1 12px 20px);background-size:40px 4px;animation:flow 1.3s linear infinite}
 .st.g-risk:not(:last-child)::after{background:repeating-linear-gradient(90deg,#F4B042 0 9px,transparent 9px 15px);background-size:30px 4px;animation:flow 2.6s linear infinite}
 .st.g-none:not(:last-child)::after{background:repeating-linear-gradient(90deg,#4F6788 0 3px,transparent 3px 9px)}
