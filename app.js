@@ -22,6 +22,7 @@
     payouts: ico('<path d="M3 7h18v10H3z"/><circle cx="12" cy="12" r="2.2"/>'),
     recon: ico('<path d="M4 8h13M13 4l4 4-4 4"/><path d="M20 16H7M11 12l-4 4 4 4"/>'),
     report: ico('<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>'),
+    integ: ico('<rect x="3" y="4" width="7" height="6" rx="1"/><rect x="14" y="14" width="7" height="6" rx="1"/><path d="M10 7h4a3 3 0 013 3v4M7 10v4a3 3 0 003 3h4"/>'),
     cabinet: ico('<path d="M4 5h16v14H4z"/><path d="M4 10h16M9 10v9"/>'),
     sun: ico('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'),
     moon: ico('<path d="M20 14.5A8 8 0 019.5 4 8 8 0 1020 14.5z"/>'),
@@ -52,6 +53,7 @@
       payouts: { rows: D.payoutsStart.map(function (r) { return Object.assign({}, r); }), sel: 3, msg: null },
       recon: { rows: JSON.parse(JSON.stringify(D.reconStart)), open: null, msg: null },
       report: { filter: 'all', pick: {} },
+      integ: { mod: 'prov', crit: { c1: true, c2: true, c3: true, c4: true, c5: true, c6: false }, phase: 0 },
       cabinet: { tasks: D.tasks.map(function (t) { return Object.assign({}, t); }), onlyOpen: false }
     };
     D.findings.forEach(function (f) { S.report.pick[f.id] = f.sev !== 'later'; });
@@ -65,6 +67,7 @@
     { id: 'payouts', name: 'Выплаты самозанятым', icon: I.payouts },
     { id: 'recon', name: 'Сверка', icon: I.recon },
     { id: 'report', name: 'Отчёт ревью', icon: I.report },
+    { id: 'integration', name: 'Интеграция и релиз', icon: I.integ },
     { id: 'cabinet', name: 'Кабинет проекта', icon: I.cabinet }
   ];
 
@@ -128,8 +131,8 @@
     var evPill = { ok: '', dup: pill('bad', 'дубль'), skip: pill('info', 'отклонён'), storno: pill('warn', 'сторно') };
     var body = rows.map(function (r, i) {
       var fresh = L.fresh && i === rows.length - 1 ? ' fresh' : '';
-      return '<tr class="k-' + r.kind + fresh + '"><td class="tm">' + r.t + '</td><td class="ev">' + esc(r.ev) + ' ' + evPill[r.kind] + '</td><td class="key">' + r.key + '</td>' +
-        '<td class="num' + (r.amt < 0 ? ' neg' : '') + '">' + (r.amt === 0 ? '0' : (r.amt > 0 ? '+' : '') + fmt(r.amt)) + '</td><td class="num"><b>' + fmt(r.bal) + '</b></td></tr>';
+      return '<tr class="k-' + r.kind + fresh + '"><td class="tm" data-label="Время">' + r.t + '</td><td class="ev" data-label="Событие">' + esc(r.ev) + ' ' + evPill[r.kind] + '</td><td class="key" data-label="Ключ операции">' + r.key + '</td>' +
+        '<td class="num' + (r.amt < 0 ? ' neg' : '') + '" data-label="Сумма, ₽">' + (r.amt === 0 ? '0' : (r.amt > 0 ? '+' : '') + fmt(r.amt)) + '</td><td class="num" data-label="Остаток, ₽"><b>' + fmt(r.bal) + '</b></td></tr>';
     }).join('');
     return '' +
       '<div class="head"><div>' + route_(['pay']) + '<h1>Журнал и повторы</h1>' +
@@ -143,7 +146,7 @@
       '<button class="switch" type="button" role="switch" aria-checked="' + L.protect + '" data-act="ledger-protect" data-fid="prot"><span class="track"></span><span><b>Защита от повторов</b><small>' + (L.protect ? 'Включена: платёж с тем же ключом второй раз не проходит.' : 'Выключена: так работает код, где ключа операции нет.') + '</small></span></button>' +
       (msg(L.msg) || '') + '</section>' +
       '<p class="sub">Строки журнала не редактируются. Ошибку исправляет новая строка, сторно.</p></div>' +
-      '<div class="stack"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Время</th><th>Событие</th><th>Ключ операции</th><th class="num">Сумма, ₽</th><th class="num">Остаток, ₽</th></tr></thead><tbody>' + body + '</tbody></table></div>' +
+      '<div class="stack"><div class="tbl-wrap"><table class="tbl cards"><thead><tr><th>Время</th><th>Событие</th><th>Ключ операции</th><th class="num">Сумма, ₽</th><th class="num">Остаток, ₽</th></tr></thead><tbody>' + body + '</tbody></table></div>' +
       '<div class="recap"><div><small>Остаток в нашем журнале</small><b>' + rub(bal) + '</b></div><div><small>По данным провайдера</small><b>' + rub(truth) + '</b></div>' +
       '<div class="state-' + (diff ? 'bad' : 'ok') + '"><small>Расхождение</small><b class="' + (diff ? 'neg' : '') + '">' + (diff ? rub(diff) : '0 ₽') + '</b> ' + (diff ? pill('bad', 'не сходится') : pill('ok', 'сходится')) + '</div></div>' +
       (hasDup ? '<div class="row"><button class="btn" type="button" data-act="ledger-storno" data-fid="storno">Сторнировать дубль</button><span class="sub">Добавит строку −12 400 ₽, старые строки не тронем.</span></div>' : '') +
@@ -252,7 +255,7 @@
         ? '<button class="btn sm quiet" type="button" data-act="po-pay" data-i="' + i + '" data-fid="pay' + i + '">Запустить ещё раз</button>'
         : (r.check ? '' : '<button class="btn sm" type="button" data-act="po-check" data-i="' + i + '" data-fid="chk' + i + '">Чек получен</button> ') +
           '<button class="btn sm' + (r.check ? ' primary' : '') + '" type="button" data-act="po-pay" data-i="' + i + '" data-fid="pay' + i + '">Выплатить</button>';
-      return '<tr class="po-row" data-act="po-sel" data-i="' + i + '" aria-selected="' + (i === P.sel) + '"><td>№' + r.order + '</td><td><div class="po-who"><span class="po-av">' + (ini ? ini.slice(-2) : 'И') + '</span>' + r.seller + '</div></td><td class="num">' + rub(s) + '</td><td>' + st + '</td><td class="num"><div class="row" style="justify-content:flex-end;flex-wrap:nowrap">' + act + '</div></td></tr>';
+      return '<tr class="po-row" data-act="po-sel" data-i="' + i + '" aria-selected="' + (i === P.sel) + '"><td data-label="Заказ">№' + r.order + '</td><td data-label="Исполнитель"><div class="po-who"><span class="po-av">' + (ini ? ini.slice(-2) : 'И') + '</span>' + r.seller + '</div></td><td class="num" data-label="К выплате">' + rub(s) + '</td><td data-label="Статус">' + st + '</td><td class="num act"><div class="row" style="justify-content:flex-end;flex-wrap:nowrap">' + act + '</div></td></tr>';
     }).join('');
     return '' +
       '<div class="head"><div>' + route_(['split', 'payout']) + '<h1>Выплаты самозанятым</h1>' +
@@ -261,7 +264,7 @@
       '<section class="panel"><h2>Как делится заказ №' + sel.order + ' на ' + rub(sel.gross) + '</h2><p class="sub">Толщина потока показывает долю суммы.</p>' + flowHtml(sel, sp) +
       '<div class="row sp">' + (sum === sel.gross ? pill('ok', 'Части дают ровно ' + rub(sum)) : pill('bad', 'Части не сходятся с заказом')) + '</div></section>' +
       '<div class="recap sp"><div><small>Выплачено</small><b>' + rub(tot.paid) + '</b></div><div><small>Готово к выплате</small><b>' + rub(tot.ready) + '</b></div><div><small>Ждёт чек самозанятого</small><b>' + rub(tot.wait) + '</b></div></div>' +
-      '<div class="sp stack">' + (msg(P.msg) || '') + '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Заказ</th><th>Исполнитель</th><th class="num">К выплате</th><th>Статус</th><th class="num">Действие</th></tr></thead><tbody>' + trs + '</tbody></table></div></div>';
+      '<div class="sp stack">' + (msg(P.msg) || '') + '<div class="tbl-wrap"><table class="tbl cards"><thead><tr><th>Заказ</th><th>Исполнитель</th><th class="num">К выплате</th><th>Статус</th><th class="num">Действие</th></tr></thead><tbody>' + trs + '</tbody></table></div></div>';
   }
 
   /* ---------- экран 5: сверка ---------- */
@@ -270,12 +273,12 @@
     var open = R.rows.filter(function (r) { return r.issue && !r.done; }).length;
     var tOurs = 0, tProv = 0;
     R.rows.forEach(function (r) { tOurs += r.ours ? r.ours.a : 0; tProv += r.prov ? r.prov.a : 0; });
-    var cell = function (x, cls) { return x ? '<td class="' + (cls || '') + '">' + x.s + '</td><td class="num">' + fmt(x.a) + '</td>' : '<td class="' + (cls || '') + ' dim">нет записи</td><td class="num dim">—</td>'; };
+    var cell = function (x, cls, who) { return x ? '<td class="' + (cls || '') + '" data-label="' + who + ': статус">' + x.s + '</td><td class="num" data-label="' + who + ': сумма, ₽">' + fmt(x.a) + '</td>' : '<td class="' + (cls || '') + ' dim" data-label="' + who + ': статус">нет записи</td><td class="num dim" data-label="' + who + ': сумма, ₽">—</td>'; };
     var trs = R.rows.map(function (r) {
       var bad = r.issue && !r.done;
       var state = bad ? pill('bad', D.reconIssues[r.issue].title.split(' на ')[0]) : pill('ok', r.issue ? 'Разобрано' : 'Совпало');
       var btn = bad ? '<button class="btn sm primary" type="button" data-act="rc-open" data-id="' + r.id + '" data-fid="o' + r.id + '">' + (R.open === r.id ? 'Свернуть' : 'Разобрать') + '</button>' : '';
-      var out = '<tr><td><b>№' + r.id + '</b></td>' + cell(r.ours) + cell(r.prov, 'sep') + '<td class="sep">' + state + '</td><td class="num">' + btn + '</td></tr>';
+      var out = '<tr><td class="ord"><b>№' + r.id + '</b></td>' + cell(r.ours, '', 'База') + cell(r.prov, 'sep', 'Провайдер') + '<td class="sep" data-label="Результат">' + state + '</td><td class="num act">' + btn + '</td></tr>';
       if (bad && R.open === r.id) {
         var is = D.reconIssues[r.issue];
         out += '<tr class="diff-row"><td colspan="7"><div class="diff-box"><div><h4>Что не так</h4><p>' + is.title + '</p></div><div><h4>Почему</h4><p>' + is.cause + '</p></div><div><h4>Что делаем</h4><p>' + is.action + '</p><div class="sp"><button class="btn primary sm" type="button" data-act="rc-apply" data-id="' + r.id + '" data-fid="a' + r.id + '">' + is.apply + '</button></div></div></div></td></tr>';
@@ -293,8 +296,8 @@
       '<div class="cells" role="img" aria-label="Заказы: ' + (R.rows.length - open) + ' из ' + R.rows.length + ' сошлись">' + R.rows.map(function (r) { return '<i class="' + (r.issue && !r.done ? 'bad' : (r.issue ? 'fix' : '')) + '" title="Заказ №' + r.id + '"></i>'; }).join('') + '</div>' +
       '<div class="cells-cap"><span>Совпало ' + (R.rows.length - open) + ' из ' + R.rows.length + '</span><span>' + (open ? 'Осталось разобрать: ' + open : 'Всё разобрано') + '</span></div>' +
       (ok ? '<div class="msg ok sp" role="status">' + I.okI + '<span><b>Сверка сошлась.</b> Итоги совпадают, расхождений нет.</span></div>' : (R.msg ? '<div class="sp">' + msg(R.msg) + '</div>' : '')) +
-      '<div class="tbl-wrap sp"><table class="tbl"><thead><tr class="grp"><th rowspan="2">Заказ</th><th colspan="2" class="grp-h">Наша база</th><th colspan="2" class="grp-h">Провайдер</th><th rowspan="2">Результат</th><th rowspan="2"></th></tr><tr><th>Статус</th><th class="num">Сумма, ₽</th><th>Статус</th><th class="num">Сумма, ₽</th></tr></thead><tbody>' + trs +
-      '</tbody><tfoot><tr><td><b>Итого</b></td><td></td><td class="num"><b>' + fmt(tOurs) + '</b></td><td></td><td class="num"><b>' + fmt(tProv) + '</b></td><td colspan="2">' + (tOurs === tProv ? pill('ok', 'сходится') : '<span class="amt-diff">Разница ' + rub(tOurs - tProv) + '</span>') + '</td></tr></tfoot></table></div>';
+      '<div class="tbl-wrap sp"><table class="tbl cards rc"><thead><tr class="grp"><th rowspan="2">Заказ</th><th colspan="2" class="grp-h">Наша база</th><th colspan="2" class="grp-h">Провайдер</th><th rowspan="2">Результат</th><th rowspan="2"></th></tr><tr><th>Статус</th><th class="num">Сумма, ₽</th><th>Статус</th><th class="num">Сумма, ₽</th></tr></thead><tbody>' + trs +
+      '</tbody><tfoot><tr><td class="ord"><b>Итого</b></td><td></td><td class="num" data-label="База, ₽"><b>' + fmt(tOurs) + '</b></td><td></td><td class="num" data-label="Провайдер, ₽"><b>' + fmt(tProv) + '</b></td><td colspan="2" class="res">' + (tOurs === tProv ? pill('ok', 'сходится') : '<span class="amt-diff">Разница ' + rub(tOurs - tProv) + '</span>') + '</td></tr></tfoot></table></div>';
   }
 
   /* ---------- экран 6: отчёт ---------- */
@@ -327,7 +330,66 @@
       '<div class="rew"><h3>' + pill('bad', 'Переписываем') + '</h3><ul>' + D.rewrite.map(function (x) { return '<li><span>' + x + '</span></li>'; }).join('') + '</ul></div></div></div></section>';
   }
 
-  /* ---------- экран 7: кабинет ---------- */
+
+  /* ---------- экран 7: интеграция и релиз ---------- */
+  var PV = { y: ['ok', 'заявлено'], c: ['warn', 'уточняем'], n: ['bad', 'нет'] };
+  function viewIntegration() {
+    var G = S.integ, mods = [];
+    D.arch.forEach(function (l) { l.mods.forEach(function (m) { mods.push(m); }); });
+    var m = mods.filter(function (x) { return x.id === G.mod; })[0];
+    var vn = D.vName[m.v];
+    var layers = D.arch.map(function (l) {
+      return '<div class="layer"><div class="layer-name">' + l.name + '</div><div class="mods">' + l.mods.map(function (x) {
+        var v = D.vName[x.v];
+        return '<button class="mod v-' + x.v + '" type="button" data-act="ig-mod" data-id="' + x.id + '" data-fid="m-' + x.id + '" aria-pressed="' + (x.id === G.mod) + '"><b>' + x.name + '</b>' + pill(v[0], v[1]) + '</button>';
+      }).join('') + '</div></div>';
+    }).join('');
+
+    var on = D.crit.filter(function (c) { return G.crit[c.id]; });
+    var scored = D.providers.map(function (p, i) {
+      var sc = on.filter(function (c) { return p.v[c.id] === 'y'; }).length;
+      return { p: p, i: i, sc: sc };
+    }).sort(function (a, b) { return b.sc - a.sc || a.i - b.i; });
+    var chips = D.crit.map(function (c) {
+      return '<button class="chip" type="button" data-act="ig-crit" data-id="' + c.id + '" data-fid="c-' + c.id + '" aria-pressed="' + !!G.crit[c.id] + '">' + c.name + '</button>';
+    }).join('');
+    var cards = scored.map(function (x) {
+      return '<div class="prov"><div class="prov-top"><h3>' + x.p.name + '</h3><span class="score">' + (on.length ? '<b>' + x.sc + '</b> из ' + on.length : '—') + '</span></div><ul>' +
+        D.crit.map(function (c) {
+          var st = PV[x.p.v[c.id]];
+          var ic = { y: I.okI, c: I.riskI, n: I.badI }[x.p.v[c.id]];
+          return '<li class="' + (G.crit[c.id] ? '' : 'off') + '"><i class="st ' + st[0] + '" role="img" aria-label="' + st[1] + '" title="' + st[1] + '">' + ic + '</i><span>' + c.name + '</span></li>';
+        }).join('') + '</ul><p class="prov-note">' + x.p.note + '</p></div>';
+    }).join('');
+
+    var ph = D.phases[G.phase];
+    var steps = D.phases.map(function (x, i) {
+      return '<button class="step" type="button" data-act="ig-phase" data-i="' + i + '" data-fid="p' + i + '" aria-pressed="' + (i === G.phase) + '"><span class="n">' + (i + 1) + '</span><span class="t"><b>' + x.name + '</b><small>' + x.weeks + '</small></span></button>';
+    }).join('');
+
+    return '' +
+      '<div class="head"><div><h1>Интеграция и релиз</h1>' +
+      '<p class="lead">Как мы видим полную версию: схема системы, выбор платёжного сервиса и порядок подключения. Это образец раздела заключения, цифры и сроки уточняются на Этапе 0.</p></div></div>' +
+      '<section class="panel"><h2>Схема системы для релиза</h2><p class="sub">Нажмите на блок, чтобы увидеть, что он делает и что с ним по итогам ревью.</p>' +
+      '<div class="arch" role="group" aria-label="Блоки системы">' + layers + '</div></section>' +
+      '<section class="panel detail" aria-live="polite"><div class="detail-head"><h2>' + m.name + ' ' + pill(vn[0], vn[1]) + '</h2></div>' +
+      '<div><h3><i></i>Что делает</h3><p>' + m.what + '</p></div><div><h3><i></i>С чем стыкуется</h3><p>' + m.links + '</p></div><div><h3><i></i>Что в заключении</h3><p>' + m.report + '</p></div></section>' +
+      '<section class="panel gap"><h2>Какой платёжный сервис подключать</h2><p class="sub">Отметьте, что важно для платформы: сервисы пересортируются. «Заявлено» значит, что возможность есть в описании сервиса. «Уточняем» проверим у менеджера на Этапе 0. Тарифы и лимиты тоже сверяем там.</p>' +
+      '<div class="chips" role="group" aria-label="Что важно">' + chips + '</div>' +
+      '<div class="pv-legend">' + pill('ok', 'заявлено') + pill('warn', 'уточняем') + pill('bad', 'нет') + '</div>' +
+      '<div class="prov-grid">' + cards + '</div>' +
+      '<p class="foot-note">Российские сервисы не принимают платежи в Европе, поэтому ядро работает через адаптер: для Европы подключается отдельный сервис, а не переписывается всё.</p></section>' +
+      '<section class="panel gap"><h2>Как подключаем: пять шагов</h2><p class="sub">Каждый шаг заканчивается проверяемым результатом, а не словом «готово».</p>' +
+      '<div class="steps" role="group" aria-label="Шаги подключения">' + steps + '</div></section>' +
+      '<section class="panel detail" aria-live="polite"><div class="detail-head"><h2>' + (G.phase + 1) + '. ' + ph.name + '</h2><span class="weeks">' + ph.weeks + '</span></div>' +
+      '<div><h3><i></i>Что делаем</h3><p>' + ph.does + '</p></div>' +
+      '<div><h3><i></i>Шаг готов, когда</h3><ul class="done">' + ph.done.map(function (x) { return '<li>' + I.okI + '<span>' + x + '</span></li>'; }).join('') + '</ul></div>' +
+      '<div><h3><i></i>Что получаете</h3><p>' + ph.out + '</p></div></section>' +
+      '<section class="panel gap"><h2>Задел на Европу</h2><p class="sub">Что закладываем сейчас, чтобы выход за пределы России не потребовал переписывать деньги.</p>' +
+      '<div class="eu">' + D.eu.map(function (x) { return '<div><h3>' + x.h + '</h3><p>' + x.t + '</p></div>'; }).join('') + '</div></section>';
+  }
+
+  /* ---------- экран 8: кабинет ---------- */
   var TSTATE = { todo: ['none', 'Не начато'], doing: ['warn', 'В работе'], done: ['ok', 'Готово'] };
   function viewCabinet() {
     var C = S.cabinet, T = C.tasks;
@@ -445,13 +507,17 @@
     'rep-filter': function (d) { S.report.filter = d.f; },
     'rep-pick': function (d, el) { S.report.pick[d.id] = el.checked; },
 
+    'ig-mod': function (d) { S.integ.mod = d.id; },
+    'ig-crit': function (d) { S.integ.crit[d.id] = !S.integ.crit[d.id]; },
+    'ig-phase': function (d) { S.integ.phase = +d.i; },
+
     'cab-step': function (d) { var t = S.cabinet.tasks[+d.i]; t.st = { todo: 'doing', doing: 'done', done: 'todo' }[t.st]; },
     'cab-open': function () { S.cabinet.onlyOpen = !S.cabinet.onlyOpen; },
     'cab-reset': function () { S.cabinet = { tasks: D.tasks.map(function (t) { return Object.assign({}, t); }), onlyOpen: false }; }
   };
 
   /* ---------- вывод ---------- */
-  var RENDER = { map: viewMap, ledger: viewLedger, receipts: viewReceipts, payouts: viewPayouts, recon: viewRecon, report: viewReport, cabinet: viewCabinet };
+  var RENDER = { map: viewMap, ledger: viewLedger, receipts: viewReceipts, payouts: viewPayouts, recon: viewRecon, report: viewReport, integration: viewIntegration, cabinet: viewCabinet };
   function render(keepFocus) {
     var fid = keepFocus && document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.fid : null;
     var scroll = window.scrollY;
