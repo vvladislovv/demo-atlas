@@ -22,6 +22,8 @@
     payouts: ico('<path d="M3 7h18v10H3z"/><circle cx="12" cy="12" r="2.2"/>'),
     recon: ico('<path d="M4 8h13M13 4l4 4-4 4"/><path d="M20 16H7M11 12l-4 4 4 4"/>'),
     report: ico('<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>'),
+    home: ico('<path d="M4 11l8-7 8 7v9H4z"/><path d="M10 20v-6h4v6"/>'),
+    settings: ico('<circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/>'),
     integ: ico('<rect x="3" y="4" width="7" height="6" rx="1"/><rect x="14" y="14" width="7" height="6" rx="1"/><path d="M10 7h4a3 3 0 013 3v4M7 10v4a3 3 0 003 3h4"/>'),
     cabinet: ico('<path d="M4 5h16v14H4z"/><path d="M4 10h16M9 10v9"/>'),
     sun: ico('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'),
@@ -42,33 +44,37 @@
     return '<div class="msg ' + m.kind + '" role="status">' + icon + '<span>' + m.text + '</span></div>';
   }
 
+
+  /* ---------- общие блоки приложения ---------- */
+  function head(title, sub) {
+    return '<div class="head"><div><h1>' + title + '</h1>' + (sub ? '<p class="sub-h">' + sub + '</p>' : '') + '</div></div>';
+  }
+  // Всё, что имитирует внешний мир (провайдера, кассу), живёт в песочнице и помечено как тестовое.
+  function sandbox(title, note, inner) {
+    return '<section class="panel sandbox" aria-label="Песочница"><div class="sb-head"><span class="sb-tag">Песочница</span><b>' + title + '</b></div>' +
+      '<p class="sub">' + note + '</p><div class="stack">' + inner + '</div></section>';
+  }
+
   /* ---------- состояние ---------- */
   var S;
   function initState() {
     S = {
-      view: 'map',
-      map: { sel: 'pay' },
+      view: 'home',
       ledger: { protect: true, paid: false, rows: D.ledgerStart.map(function (r) { return Object.assign({}, r); }), msg: null, fresh: false, seq: 0 },
       receipts: { cashDown: false, fd: 1042, list: D.receiptsStart.map(function (r) { return Object.assign({}, r); }), sel: 'r3', orderState: 'new', msg: null, print: false },
       payouts: { rows: D.payoutsStart.map(function (r) { return Object.assign({}, r); }), sel: 3, msg: null },
-      recon: { rows: JSON.parse(JSON.stringify(D.reconStart)), open: null, msg: null },
-      report: { filter: 'all', pick: {} },
-      integ: { mod: 'prov', crit: { c1: true, c2: true, c3: true, c4: true, c5: true, c6: false }, phase: 0 },
-      cabinet: { tasks: D.tasks.map(function (t) { return Object.assign({}, t); }), onlyOpen: false }
+      recon: { rows: JSON.parse(JSON.stringify(D.reconStart)), open: null, msg: null }
     };
-    D.findings.forEach(function (f) { S.report.pick[f.id] = f.sev !== 'later'; });
   }
   initState();
 
   var VIEWS = [
-    { id: 'map', name: 'Карта денег', icon: I.map },
-    { id: 'ledger', name: 'Журнал и повторы', icon: I.ledger },
-    { id: 'receipts', name: 'Чеки и возвраты', icon: I.receipts },
-    { id: 'payouts', name: 'Выплаты самозанятым', icon: I.payouts },
+    { id: 'home', name: 'Обзор', icon: I.home },
+    { id: 'ledger', name: 'Платежи', icon: I.ledger },
+    { id: 'receipts', name: 'Чеки', icon: I.receipts },
+    { id: 'payouts', name: 'Выплаты', icon: I.payouts },
     { id: 'recon', name: 'Сверка', icon: I.recon },
-    { id: 'report', name: 'Отчёт ревью', icon: I.report },
-    { id: 'integration', name: 'Интеграция и релиз', icon: I.integ },
-    { id: 'cabinet', name: 'Кабинет проекта', icon: I.cabinet }
+    { id: 'settings', name: 'Настройки', icon: I.settings }
   ];
 
   /* ---------- навигация ---------- */
@@ -76,57 +82,23 @@
     var open = S.recon.rows.filter(function (r) { return r.issue && !r.done; }).length;
     var queued = S.receipts.list.filter(function (r) { return r.status === 'queue'; }).length;
     $('#nav').innerHTML = VIEWS.map(function (v) {
-      var badge = '', sep = v.id === 'report' ? '<div class="sep">Итог Этапа 0</div>' : '';
+      var badge = '', sep = '';
       if (v.id === 'recon') badge = '<span class="badge' + (open ? '' : ' zero') + '" title="' + (open ? 'Расхождений: ' + open : 'Расхождений нет') + '">' + (open || '0') + '</span>';
       if (v.id === 'receipts' && queued) badge = '<span class="badge" title="Чеков в очереди: ' + queued + '">' + queued + '</span>';
       return sep + '<a href="#' + v.id + '"' + (S.view === v.id ? ' aria-current="page"' : '') + '>' + v.icon + '<span>' + v.name + '</span>' + badge + '</a>';
     }).join('');
   }
 
-  /* ---------- маршрут платежа над экраном ---------- */
-  function route_(on) {
-    var idx = D.nodes.map(function (n) { return n.id; });
-    var first = Math.min.apply(null, on.map(function (x) { return idx.indexOf(x); }));
-    return '<nav class="route" aria-label="Где мы на пути платежа">' + D.nodes.map(function (n, i) {
-      var cls = on.indexOf(n.id) >= 0 ? 'on' : (i < first ? 'pass' : '');
-      return '<a href="#' + n.go + '" class="' + cls + '"' + (cls === 'on' ? ' aria-current="step"' : '') + '><i></i>' + n.name + '</a>';
-    }).join('') + '</nav>';
-  }
-
-  /* ---------- экран 1: карта денег ---------- */
-  var ST = { ok: ['ok', 'Всё в порядке'], risk: ['risk', 'Есть риск'], none: ['none', 'Нет проверки'] };
-  var RANK = { ok: 0, risk: 1, none: 2 };
-  function viewMap() {
-    var nodes = D.nodes;
-    var c = { ok: 0, risk: 0, none: 0 };
-    nodes.forEach(function (n) { c[n.status]++; });
-    var sel = nodes.filter(function (n) { return n.id === S.map.sel; })[0];
-    var selNo = nodes.indexOf(sel) + 1;
-    return '' +
-      '<div class="head"><div><h1>Карта денег</h1>' +
-      '<p class="lead">Путь одного платежа от заказа до сверки. Так выглядит карта рисков в заключении Этапа 0. Статусы здесь примерные, как у типичного MVP, который писали быстро.</p></div></div>' +
-      '<section class="board" aria-label="Схема пути платежа">' +
-      '<div class="board-top"><div><h2>Платёж идёт слева направо</h2><p>Нажмите на звено, чтобы увидеть, что проверяем и как оно ломается.</p></div>' +
-      '<div class="legend">' + pill('ok', c.ok + ' в порядке') + pill('risk', c.risk + ' с риском') + pill('none', c.none + ' без проверки') + '</div></div>' +
-      '<div class="track" role="group" aria-label="Звенья платежа"><span class="coin" aria-hidden="true"></span>' + nodes.map(function (n, i) {
-        var nx = nodes[i + 1], g = nx ? (RANK[n.status] >= RANK[nx.status] ? n.status : nx.status) : n.status;
-        return '<button class="st s-' + n.status + ' g-' + g + '" type="button" data-act="map-sel" data-id="' + n.id + '" data-fid="n-' + n.id + '" aria-pressed="' + (n.id === sel.id) + '">' +
-          '<span class="dot">' + (i + 1) + '</span><span class="txt"><b>' + n.name + '</b>' + pill(ST[n.status][0], ST[n.status][1]) + '</span></button>';
-      }).join('') + '</div>' +
-      '<div class="board-foot"><span><i class="k-ok"></i>деньги идут, проверено</span><span><i class="k-risk"></i>идут с риском</span><span><i class="k-none"></i>проверки нет</span></div></section>' +
-      '<section class="panel detail" aria-live="polite">' +
-      '<div class="detail-head"><h2>' + selNo + '. ' + sel.name + ' ' + pill(ST[sel.status][0], ST[sel.status][1]) + '</h2><a class="btn sm primary" href="#' + sel.go + '">Открыть сценарий</a></div>' +
-      '<div><h3><i></i>Что проверяем</h3><p>' + sel.check + '</p></div>' +
-      '<div><h3><i></i>Как это ломается</h3><p>' + sel.fails + '</p></div>' +
-      '<div><h3><i></i>Что будет в заключении</h3><p>' + sel.report + '</p></div></section>';
-  }
-
   /* ---------- экран 2: журнал ---------- */
-  function viewLedger() {
+  var LEDGER_BASE = 27750; // сумма платежей по журналу до оплаты №2841
+  function ledgerState() {
     var L = S.ledger, bal = 0;
     var rows = L.rows.map(function (r) { bal += r.amt; return Object.assign({}, r, { bal: bal }); });
-    var truth = 27750 + (L.paid ? 12400 : 0);
-    var diff = bal - truth;
+    var truth = LEDGER_BASE + (L.paid ? 12400 : 0);
+    return { rows: rows, bal: bal, truth: truth, diff: bal - truth };
+  }
+  function viewLedger() {
+    var L = S.ledger, st = ledgerState(), rows = st.rows, bal = st.bal, truth = st.truth, diff = st.diff;
     var hasDup = L.rows.some(function (r) { return r.kind === 'dup'; }) && !L.rows.some(function (r) { return r.kind === 'storno'; });
     var evPill = { ok: '', dup: pill('bad', 'дубль'), skip: pill('info', 'отклонён'), storno: pill('warn', 'сторно') };
     var body = rows.map(function (r, i) {
@@ -134,23 +106,23 @@
       return '<tr class="k-' + r.kind + fresh + '"><td class="tm" data-label="Время">' + r.t + '</td><td class="ev" data-label="Событие">' + esc(r.ev) + ' ' + evPill[r.kind] + '</td><td class="key" data-label="Ключ операции">' + r.key + '</td>' +
         '<td class="num' + (r.amt < 0 ? ' neg' : '') + '" data-label="Сумма, ₽">' + (r.amt === 0 ? '0' : (r.amt > 0 ? '+' : '') + fmt(r.amt)) + '</td><td class="num" data-label="Остаток, ₽"><b>' + fmt(r.bal) + '</b></td></tr>';
     }).join('');
-    return '' +
-      '<div class="head"><div>' + route_(['pay']) + '<h1>Журнал и повторы</h1>' +
-      '<p class="lead">Провайдер иногда присылает одно и то же уведомление дважды. Нажмите «Принять платёж», потом «Прислать повтор» и сравните, что произойдёт с защитой и без неё.</p></div>' +
-      '<button class="btn quiet sm" type="button" data-act="ledger-reset" data-fid="reset">Сбросить сценарий</button></div>' +
-      '<div class="grid two-narrow">' +
-      '<div class="stack">' +
-      '<section class="panel stack"><div class="paycard"><div class="pc-top"><span>Входящий платёж</span><span class="pc-chip">касса по ссылке</span></div><span class="big">' + rub(12400) + '</span><span class="pc-order">Заказ №2841</span><span class="key">ключ операции pay_2841_a7f3</span></div>' +
-      '<div class="row"><button class="btn primary" type="button" data-act="ledger-pay" data-fid="pay"' + (L.paid ? ' disabled' : '') + '>Принять платёж</button>' +
+    var sim = '<div class="paycard"><div class="pc-top"><span>Уведомление от провайдера</span><span class="pc-chip">касса по ссылке</span></div><span class="big">' + rub(12400) + '</span><span class="pc-order">Заказ №2841</span><span class="key">ключ операции pay_2841_a7f3</span></div>' +
+      '<div class="row"><button class="btn primary" type="button" data-act="ledger-pay" data-fid="pay"' + (L.paid ? ' disabled' : '') + '>Имитировать оплату</button>' +
       '<button class="btn" type="button" data-act="ledger-dup" data-fid="dup"' + (L.paid ? '' : ' disabled') + '>Прислать повтор</button></div>' +
-      '<button class="switch" type="button" role="switch" aria-checked="' + L.protect + '" data-act="ledger-protect" data-fid="prot"><span class="track"></span><span><b>Защита от повторов</b><small>' + (L.protect ? 'Включена: платёж с тем же ключом второй раз не проходит.' : 'Выключена: так работает код, где ключа операции нет.') + '</small></span></button>' +
-      (msg(L.msg) || '') + '</section>' +
-      '<p class="sub">Строки журнала не редактируются. Ошибку исправляет новая строка, сторно.</p></div>' +
-      '<div class="stack"><div class="tbl-wrap"><table class="tbl cards"><thead><tr><th>Время</th><th>Событие</th><th>Ключ операции</th><th class="num">Сумма, ₽</th><th class="num">Остаток, ₽</th></tr></thead><tbody>' + body + '</tbody></table></div>' +
+      protectSwitch('prot');
+    return head('Платежи', 'Журнал операций. Строки не редактируются: ошибку исправляет новая строка, сторно.') +
+      '<div class="grid two-narrow"><div class="stack">' +
+      sandbox('Эмулятор платёжного сервиса', 'В боевой системе уведомления приходят от провайдера сами. Здесь их запускают вручную: примите платёж, затем пришлите повтор.', sim) + '</div>' +
+      '<div class="stack">' + (msg(L.msg) || '') + '<div class="tbl-wrap"><table class="tbl cards"><thead><tr><th>Время</th><th>Событие</th><th>Ключ операции</th><th class="num">Сумма, ₽</th><th class="num">Остаток, ₽</th></tr></thead><tbody>' + body + '</tbody></table></div>' +
       '<div class="recap"><div><small>Остаток в нашем журнале</small><b>' + rub(bal) + '</b></div><div><small>По данным провайдера</small><b>' + rub(truth) + '</b></div>' +
-      '<div class="state-' + (diff ? 'bad' : 'ok') + '"><small>Расхождение</small><b class="' + (diff ? 'neg' : '') + '">' + (diff ? rub(diff) : '0 ₽') + '</b> ' + (diff ? pill('bad', 'не сходится') : pill('ok', 'сходится')) + '</div></div>' +
+      '<div class="state-' + (diff ? 'bad' : 'ok') + '"><small>Расхождение</small><b class="' + (diff ? 'neg' : '') + '">' + (diff ? rub(diff) : '0 ₽') + '</b> ' + (diff ? pill('bad', 'не сходится') : pill('ok', 'сходится')) + '</div></div>' +
       (hasDup ? '<div class="row"><button class="btn" type="button" data-act="ledger-storno" data-fid="storno">Сторнировать дубль</button><span class="sub">Добавит строку −12 400 ₽, старые строки не тронем.</span></div>' : '') +
       '</div></div>';
+  }
+  function protectSwitch(fid) {
+    var on = S.ledger.protect;
+    return '<button class="switch" type="button" role="switch" aria-checked="' + on + '" data-act="ledger-protect" data-fid="' + fid + '"><span class="track"></span><span><b>Защита от повторных уведомлений</b><small>' +
+      (on ? 'Включена: платёж с тем же ключом операции второй раз не проходит.' : 'Выключена: так работает код без ключа операции, повтор зачисляется заново.') + '</small></span></button>';
   }
 
   /* ---------- экран 3: чеки ---------- */
@@ -201,21 +173,19 @@
         '<span class="fd">' + (r.status === 'ok' ? 'ФД ' + r.fd : 'без ФД') + '</span><span><b>' + (r.type === 'prihod' ? 'Приход' : 'Возврат') + '</b> №' + r.order + ' · ' + rub(r.amt) + '</span>' +
         (r.status === 'ok' ? pill('ok', 'пробит') : pill('bad', 'в очереди')) + '</button>';
     }).join('');
-    return '' +
-      '<div class="head"><div>' + route_(['receipt']) + '<h1>Чеки и возвраты</h1>' +
-      '<p class="lead">Оплата и возврат должны давать чек по 54-ФЗ. Включите сбой кассы, проведите оплату и посмотрите, что делает система, когда чек не пробился.</p></div>' +
-      '<button class="btn quiet sm" type="button" data-act="rc-reset" data-fid="reset">Сбросить сценарий</button></div>' +
-      '<div class="grid two">' +
-      '<div class="stack">' +
-      '<section class="panel stack"><div class="paycard"><div class="pc-top"><span>Заказ №2841</span><span class="pc-chip">касса по ссылке</span></div><span class="big">' + rub(12400) + '</span><span class="pc-order">' + pill(os === 'new' ? 'none' : os === 'paid' ? 'ok' : 'info', label) + '</span></div>' +
+    var retry = queue.length ? '<div class="stack retry">' + queue.map(function (q) {
+      return '<div class="row"><span>' + (q.type === 'prihod' ? 'Приход' : 'Возврат') + ' по заказу №' + q.order + ' ждёт повтора</span><button class="btn sm primary" type="button" data-act="rc-retry" data-id="' + q.id + '" data-fid="retry">Повторить пробитие</button></div>';
+    }).join('') + '</div>' : '';
+    var sim = '<div class="paycard"><div class="pc-top"><span>Заказ №2841</span><span class="pc-chip">касса по ссылке</span></div><span class="big">' + rub(12400) + '</span><span class="pc-order">' + pill(os === 'new' ? 'none' : os === 'paid' ? 'ok' : 'info', label) + '</span></div>' +
       '<div class="row"><button class="btn primary" type="button" data-act="rc-pay" data-fid="pay"' + (os !== 'new' ? ' disabled' : '') + '>Оплатить и пробить чек</button>' +
       '<button class="btn" type="button" data-act="rc-refund" data-fid="refund"' + (canRefund ? '' : ' disabled') + '>Сделать возврат</button></div>' +
       '<button class="switch danger" type="button" role="switch" aria-checked="' + R.cashDown + '" data-act="rc-down" data-fid="down"><span class="track"></span><span><b>Касса не отвечает</b><small>' + (R.cashDown ? 'Сбой включён: новые чеки не пробиваются.' : 'Имитация сбоя у оператора фискальных данных.') + '</small></span></button>' +
-      (msg(R.msg) || '') +
-      (queue.length ? '<div class="stack">' + queue.map(function (q) { return '<div class="row"><span>' + (q.type === 'prihod' ? 'Приход' : 'Возврат') + ' по заказу №' + q.order + ' ждёт повтора</span><button class="btn sm primary" type="button" data-act="rc-retry" data-id="' + q.id + '" data-fid="retry">Повторить пробитие</button></div>'; }).join('') + '</div>' : '') +
-      '</section>' +
-      '<section class="panel"><h2>Журнал чеков</h2><p class="sub" style="margin-bottom:12px">Нажмите на строку, чтобы увидеть ленту.</p><div class="rc-list">' + items + '</div></section></div>' +
-      '<div class="tape-stage" aria-live="polite"><div class="printer' + (R.cashDown ? ' down' : '') + '"><span>ККТ · демо</span><i></i></div>' + tapeHtml(sel, R.print) + '</div></div>';
+      '';
+    return head('Чеки и возвраты', 'Каждая оплата и каждый возврат дают чек по 54-ФЗ. Не пробитые чеки ждут повтора в очереди.') +
+      '<div class="grid two"><div class="stack">' +
+      sandbox('Эмулятор заказа и кассы', 'Проведите оплату или возврат и включите сбой кассы, чтобы увидеть очередь чеков.', sim) +
+      (msg(R.msg) || '') + '<section class="panel"><h2>Журнал чеков</h2><p class="sub" style="margin-bottom:12px">Нажмите на строку, чтобы увидеть ленту.</p>' + retry + '<div class="rc-list">' + items + '</div></section></div>' +
+      '<div class="tape-stage" aria-live="polite"><div class="printer' + (R.cashDown ? ' down' : '') + '"><span>ККТ · тест</span><i></i></div>' + tapeHtml(sel, R.print) + '</div></div>';
   }
 
   /* ---------- экран 4: выплаты ---------- */
@@ -258,9 +228,7 @@
       return '<tr class="po-row" data-act="po-sel" data-i="' + i + '" aria-selected="' + (i === P.sel) + '"><td data-label="Заказ">№' + r.order + '</td><td data-label="Исполнитель"><div class="po-who"><span class="po-av">' + (ini ? ini.slice(-2) : 'И') + '</span>' + r.seller + '</div></td><td class="num" data-label="К выплате">' + rub(s) + '</td><td data-label="Статус">' + st + '</td><td class="num act"><div class="row" style="justify-content:flex-end;flex-wrap:nowrap">' + act + '</div></td></tr>';
     }).join('');
     return '' +
-      '<div class="head"><div>' + route_(['split', 'payout']) + '<h1>Выплаты самозанятым</h1>' +
-      '<p class="lead">Исполнители работают как самозанятые. Деньги уходят им только после чека, и только один раз. Попробуйте выплатить без чека и запустить выплату повторно.</p></div>' +
-      '<button class="btn quiet sm" type="button" data-act="po-reset" data-fid="reset">Сбросить сценарий</button></div>' +
+      head('Выплаты самозанятым', 'Деньги уходят исполнителю только после чека и только один раз.') +
       '<section class="panel"><h2>Как делится заказ №' + sel.order + ' на ' + rub(sel.gross) + '</h2><p class="sub">Толщина потока показывает долю суммы.</p>' + flowHtml(sel, sp) +
       '<div class="row sp">' + (sum === sel.gross ? pill('ok', 'Части дают ровно ' + rub(sum)) : pill('bad', 'Части не сходятся с заказом')) + '</div></section>' +
       '<div class="recap sp"><div><small>Выплачено</small><b>' + rub(tot.paid) + '</b></div><div><small>Готово к выплате</small><b>' + rub(tot.ready) + '</b></div><div><small>Ждёт чек самозанятого</small><b>' + rub(tot.wait) + '</b></div></div>' +
@@ -287,9 +255,7 @@
     }).join('');
     var ok = open === 0;
     return '' +
-      '<div class="head"><div>' + route_(['recon']) + '<h1>Сверка</h1>' +
-      '<p class="lead">Ваша база и выгрузка провайдера за день. Всё, что не совпало, подсвечено. Разберите три расхождения и посмотрите, как сходятся итоги.</p></div>' +
-      '<button class="btn quiet sm" type="button" data-act="recon-reset" data-fid="reset">Сбросить сценарий</button></div>' +
+      head('Сверка', 'Наша база и выгрузка провайдера за день. Всё, что не совпало, подсвечено.') +
       '<div class="duel"><div class="side"><small>Наша база</small><b>' + rub(tOurs) + '</b><span>' + R.rows.length + ' заказов за день</span></div>' +
       '<div class="mid ' + (tOurs === tProv ? 'ok' : 'bad') + '"><div><span class="df">' + (tOurs === tProv ? 'Сходится' : rub(tOurs - tProv)) + '</span><small>' + (tOurs === tProv ? 'расхождений нет' : 'расхождение') + '</small></div></div>' +
       '<div class="side"><small>Провайдер</small><b>' + rub(tProv) + '</b><span>выгрузка за тот же день</span></div></div>' +
@@ -300,129 +266,64 @@
       '</tbody><tfoot><tr><td class="ord"><b>Итого</b></td><td></td><td class="num" data-label="База, ₽"><b>' + fmt(tOurs) + '</b></td><td></td><td class="num" data-label="Провайдер, ₽"><b>' + fmt(tProv) + '</b></td><td colspan="2" class="res">' + (tOurs === tProv ? pill('ok', 'сходится') : '<span class="amt-diff">Разница ' + rub(tOurs - tProv) + '</span>') + '</td></tr></tfoot></table></div>';
   }
 
-  /* ---------- экран 6: отчёт ---------- */
-  function viewReport() {
-    var Rp = S.report, F = D.findings;
-    var shown = F.filter(function (f) { return Rp.filter === 'all' || f.sev === Rp.filter; });
-    var cnt = { critical: 0, important: 0, later: 0 }, hrs = 0, hrsAll = 0, picked = 0;
-    F.forEach(function (f) { cnt[f.sev]++; hrsAll += f.h; if (Rp.pick[f.id]) { hrs += f.h; picked++; } });
-    var sevPill = { critical: 'bad', important: 'warn', later: 'none' };
-    var chips = [['all', 'Все ' + F.length], ['critical', 'Критично ' + cnt.critical], ['important', 'Важно ' + cnt.important], ['later', 'Можно позже ' + cnt.later]];
-    var list = shown.map(function (f) {
-      return '<div class="finding" data-sev="' + f.sev + '"><input class="cb" type="checkbox" id="c-' + f.id + '" data-act="rep-pick" data-id="' + f.id + '"' + (Rp.pick[f.id] ? ' checked' : '') + ' aria-label="Взять в работу: ' + esc(f.title) + '">' +
-        '<label for="c-' + f.id + '"><div class="meta">' + pill(sevPill[f.sev], D.sevName[f.sev]) + '<span>' + f.area + '</span></div><h3>' + f.title + '</h3><p>' + f.fix + '</p></label>' +
-        '<div class="hrs">' + f.h + '<small>часов</small></div></div>';
+  /* ---------- экран: обзор ---------- */
+  function viewHome() {
+    var Rc = S.receipts, P = S.payouts, R = S.recon, st = ledgerState();
+    var tOurs = 0; R.rows.forEach(function (r) { tOurs += r.ours ? r.ours.a : 0; });
+    var queue = Rc.list.filter(function (r) { return r.status === 'queue'; }).length;
+    var open = R.rows.filter(function (r) { return r.issue && !r.done; }).length;
+    var ready = 0, wait = 0, waitN = 0, waitLong = 0;
+    P.rows.forEach(function (r) {
+      var s = split(r.gross).seller;
+      if (r.paid) return;
+      if (r.check) { ready += s; return; }
+      wait += s; waitN++; if (r.waitDays >= 3) waitLong++;
+    });
+    var items = [];
+    if (st.diff) items.push(['bad', 'Журнал расходится с провайдером на ' + rub(st.diff), 'Платежи', 'ledger']);
+    if (queue) items.push(['bad', 'Чеков не пробито: ' + queue, 'Чеки', 'receipts']);
+    if (open) items.push(['warn', 'Расхождений в сверке: ' + open, 'Сверка', 'recon']);
+    if (waitN) items.push([waitLong ? 'warn' : 'info', 'Выплат ждёт чека исполнителя: ' + waitN + (waitLong ? ', дольше 3 дней: ' + waitLong : ''), 'Выплаты', 'payouts']);
+    if (!S.ledger.protect) items.push(['warn', 'Защита от повторных уведомлений выключена', 'Настройки', 'settings']);
+    var attn = items.length ? items.map(function (x) {
+      return '<a class="attn-item" href="#' + x[3] + '">' + pill(x[0], x[0] === 'bad' ? 'Срочно' : x[0] === 'warn' ? 'Проверить' : 'В работе') + '<span>' + x[1] + '</span><i class="go">' + x[2] + ' →</i></a>';
+    }).join('') : '<div class="msg ok" role="status">' + I.okI + '<span><b>Всё в порядке.</b> Расхождений, непробитых чеков и зависших выплат нет.</span></div>';
+    var last = st.rows.slice(-5).reverse().map(function (r) {
+      return '<li class="k-' + r.kind + '"><span class="tm">' + r.t + '</span><span class="ev">' + esc(r.ev) + '</span><span class="num' + (r.amt < 0 ? ' neg' : '') + '">' + (r.amt === 0 ? '0' : (r.amt > 0 ? '+' : '') + fmt(r.amt)) + ' ₽</span></li>';
     }).join('');
-    var hs = { critical: 0, important: 0, later: 0 };
-    F.forEach(function (f) { hs[f.sev] += f.h; });
-    return '' +
-      '<div class="head"><div><h1>Отчёт ревью</h1>' +
-      '<p class="lead">Образец заключения. Каждая находка с уровнем, исправлением и оценкой в часах. Отметьте, что берём в работу, итог пересчитается. Находки вымышленные и показывают типичные слабые места кода, написанного с помощью ИИ.</p></div></div>' +
-      '<section class="panel doc"><div class="doc-head"><div><h2>Заключение по ревью платёжного контура</h2><p>Этап 0 · образец · данные вымышленные</p></div><span class="doc-stamp">ОБРАЗЕЦ</span></div><div class="doc-body">' +
-      '<div class="totals sp"><div><small>Всего находок</small><b>' + F.length + '</b></div><div><small>Взято в работу</small><b>' + picked + '</b></div><div><small>Все исправления</small><b>' + hrsAll + ' ч</b></div><div><small>Выбранные исправления</small><b>' + hrs + ' ч</b></div></div>' +
-      '<div class="hbar" role="img" aria-label="Часы по уровням: критично ' + hs.critical + ', важно ' + hs.important + ', позже ' + hs.later + '"><i class="h-c" style="flex:' + hs.critical + '"></i><i class="h-i" style="flex:' + hs.important + '"></i><i class="h-l" style="flex:' + hs.later + '"></i></div>' +
-      '<div class="hleg"><span class="c">Критично ' + hs.critical + ' ч</span><span class="i">Важно ' + hs.important + ' ч</span><span class="l">Можно позже ' + hs.later + ' ч</span></div>' +
-      '<div class="chips" role="group" aria-label="Фильтр по уровню">' + chips.map(function (c) { return '<button class="chip" type="button" data-act="rep-filter" data-f="' + c[0] + '" data-fid="f-' + c[0] + '" aria-pressed="' + (Rp.filter === c[0]) + '">' + c[1] + '</button>'; }).join('') + '</div>' +
-      list +
-      '<h2 style="margin:22px 0 14px;font-size:20px">Что оставить, что переписать</h2><div class="verdict" style="margin-bottom:18px">' +
-      '<div class="keep"><h3>' + pill('ok', 'Оставляем') + '</h3><ul>' + D.keep.map(function (x) { return '<li><span>' + x + '</span></li>'; }).join('') + '</ul></div>' +
-      '<div class="ext"><h3>' + pill('warn', 'Дорабатываем') + '</h3><ul>' + D.extend.map(function (x) { return '<li><span>' + x + '</span></li>'; }).join('') + '</ul></div>' +
-      '<div class="rew"><h3>' + pill('bad', 'Переписываем') + '</h3><ul>' + D.rewrite.map(function (x) { return '<li><span>' + x + '</span></li>'; }).join('') + '</ul></div></div></div></section>';
+    var kpi = function (label, val, sub, tone) { return '<div class="kpi' + (tone ? ' t-' + tone : '') + '"><small>' + label + '</small><b>' + val + '</b><span>' + sub + '</span></div>'; };
+    return head('Обзор', 'Сегодня, 27 октября. Что требует внимания и как идут деньги.') +
+      '<div class="kpis">' +
+      kpi('Принято за день', rub(tOurs), 'по заказам в базе') +
+      kpi('К выплате исполнителям', rub(ready), 'ждут чек: ' + rub(wait)) +
+      kpi('Чеков в очереди', queue, queue ? 'нужно повторить' : 'всё пробито', queue ? 'bad' : 'ok') +
+      kpi('Расхождения в сверке', open, open ? 'нужно разобрать' : 'сверка сходится', open ? 'warn' : 'ok') + '</div>' +
+      '<div class="grid two-eq sp"><section class="panel"><h2>Требует внимания</h2><div class="attn">' + attn + '</div></section>' +
+      '<section class="panel"><h2>Последние операции</h2><ul class="feed">' + last + '</ul><a class="more" href="#ledger">Все платежи →</a></section></div>';
   }
 
-
-  /* ---------- экран 7: интеграция и релиз ---------- */
-  var PV = { y: ['ok', 'заявлено'], c: ['warn', 'уточняем'], n: ['bad', 'нет'] };
-  function viewIntegration() {
-    var G = S.integ, mods = [];
-    D.arch.forEach(function (l) { l.mods.forEach(function (m) { mods.push(m); }); });
-    var m = mods.filter(function (x) { return x.id === G.mod; })[0];
-    var vn = D.vName[m.v];
-    var layers = D.arch.map(function (l) {
-      return '<div class="layer"><div class="layer-name">' + l.name + '</div><div class="mods">' + l.mods.map(function (x) {
-        var v = D.vName[x.v];
-        return '<button class="mod v-' + x.v + '" type="button" data-act="ig-mod" data-id="' + x.id + '" data-fid="m-' + x.id + '" aria-pressed="' + (x.id === G.mod) + '"><b>' + x.name + '</b>' + pill(v[0], v[1]) + '</button>';
-      }).join('') + '</div></div>';
-    }).join('');
-
-    var on = D.crit.filter(function (c) { return G.crit[c.id]; });
-    var scored = D.providers.map(function (p, i) {
-      var sc = on.filter(function (c) { return p.v[c.id] === 'y'; }).length;
-      return { p: p, i: i, sc: sc };
-    }).sort(function (a, b) { return b.sc - a.sc || a.i - b.i; });
-    var chips = D.crit.map(function (c) {
-      return '<button class="chip" type="button" data-act="ig-crit" data-id="' + c.id + '" data-fid="c-' + c.id + '" aria-pressed="' + !!G.crit[c.id] + '">' + c.name + '</button>';
-    }).join('');
-    var cards = scored.map(function (x) {
-      return '<div class="prov"><div class="prov-top"><h3>' + x.p.name + '</h3><span class="score">' + (on.length ? '<b>' + x.sc + '</b> из ' + on.length : '—') + '</span></div><ul>' +
-        D.crit.map(function (c) {
-          var st = PV[x.p.v[c.id]];
-          var ic = { y: I.okI, c: I.riskI, n: I.badI }[x.p.v[c.id]];
-          return '<li class="' + (G.crit[c.id] ? '' : 'off') + '"><i class="st ' + st[0] + '" role="img" aria-label="' + st[1] + '" title="' + st[1] + '">' + ic + '</i><span>' + c.name + '</span></li>';
-        }).join('') + '</ul><p class="prov-note">' + x.p.note + '</p></div>';
-    }).join('');
-
-    var ph = D.phases[G.phase];
-    var steps = D.phases.map(function (x, i) {
-      return '<button class="step" type="button" data-act="ig-phase" data-i="' + i + '" data-fid="p' + i + '" aria-pressed="' + (i === G.phase) + '"><span class="n">' + (i + 1) + '</span><span class="t"><b>' + x.name + '</b><small>' + x.weeks + '</small></span></button>';
-    }).join('');
-
-    return '' +
-      '<div class="head"><div><h1>Интеграция и релиз</h1>' +
-      '<p class="lead">Как мы видим полную версию: схема системы, выбор платёжного сервиса и порядок подключения. Это образец раздела заключения, цифры и сроки уточняются на Этапе 0.</p></div></div>' +
-      '<section class="panel"><h2>Схема системы для релиза</h2><p class="sub">Нажмите на блок, чтобы увидеть, что он делает и что с ним по итогам ревью.</p>' +
-      '<div class="arch" role="group" aria-label="Блоки системы">' + layers + '</div></section>' +
-      '<section class="panel detail" aria-live="polite"><div class="detail-head"><h2>' + m.name + ' ' + pill(vn[0], vn[1]) + '</h2></div>' +
-      '<div><h3><i></i>Что делает</h3><p>' + m.what + '</p></div><div><h3><i></i>С чем стыкуется</h3><p>' + m.links + '</p></div><div><h3><i></i>Что в заключении</h3><p>' + m.report + '</p></div></section>' +
-      '<section class="panel gap"><h2>Какой платёжный сервис подключать</h2><p class="sub">Отметьте, что важно для платформы: сервисы пересортируются. «Заявлено» значит, что возможность есть в описании сервиса. «Уточняем» проверим у менеджера на Этапе 0. Тарифы и лимиты тоже сверяем там.</p>' +
-      '<div class="chips" role="group" aria-label="Что важно">' + chips + '</div>' +
-      '<div class="pv-legend">' + pill('ok', 'заявлено') + pill('warn', 'уточняем') + pill('bad', 'нет') + '</div>' +
-      '<div class="prov-grid">' + cards + '</div>' +
-      '<p class="foot-note">Российские сервисы не принимают платежи в Европе, поэтому ядро работает через адаптер: для Европы подключается отдельный сервис, а не переписывается всё.</p></section>' +
-      '<section class="panel gap"><h2>Как подключаем: пять шагов</h2><p class="sub">Каждый шаг заканчивается проверяемым результатом, а не словом «готово».</p>' +
-      '<div class="steps" role="group" aria-label="Шаги подключения">' + steps + '</div></section>' +
-      '<section class="panel detail" aria-live="polite"><div class="detail-head"><h2>' + (G.phase + 1) + '. ' + ph.name + '</h2><span class="weeks">' + ph.weeks + '</span></div>' +
-      '<div><h3><i></i>Что делаем</h3><p>' + ph.does + '</p></div>' +
-      '<div><h3><i></i>Шаг готов, когда</h3><ul class="done">' + ph.done.map(function (x) { return '<li>' + I.okI + '<span>' + x + '</span></li>'; }).join('') + '</ul></div>' +
-      '<div><h3><i></i>Что получаете</h3><p>' + ph.out + '</p></div></section>' +
-      '<section class="panel gap"><h2>Задел на Европу</h2><p class="sub">Что закладываем сейчас, чтобы выход за пределы России не потребовал переписывать деньги.</p>' +
-      '<div class="eu">' + D.eu.map(function (x) { return '<div><h3>' + x.h + '</h3><p>' + x.t + '</p></div>'; }).join('') + '</div></section>';
-  }
-
-  /* ---------- экран 8: кабинет ---------- */
-  var TSTATE = { todo: ['none', 'Не начато'], doing: ['warn', 'В работе'], done: ['ok', 'Готово'] };
-  function viewCabinet() {
-    var C = S.cabinet, T = C.tasks;
-    var n = { done: 0, doing: 0, todo: 0 };
-    T.forEach(function (t) { n[t.st]++; });
-    var pd = Math.round(n.done / T.length * 100), pg = Math.round(n.doing / T.length * 100);
-    var weeks = {};
-    T.forEach(function (t, i) { (weeks[t.w] = weeks[t.w] || []).push({ t: t, i: i }); });
-    var html = Object.keys(weeks).map(function (w) {
-      var all = weeks[w], dn = all.filter(function (x) { return x.t.st === 'done'; }).length;
-      var items = all.filter(function (x) { return !C.onlyOpen || x.t.st !== 'done'; });
-      if (!items.length) return '';
-      return '<div class="week"><div class="week-h"><h3>' + w + '</h3>' + pill(dn === all.length ? 'ok' : (dn || all.some(function (x) { return x.t.st === 'doing'; }) ? 'warn' : 'none'), dn + ' из ' + all.length + ' готово') + '</div>' + items.map(function (x) {
-        var s = TSTATE[x.t.st];
-        return '<button class="task ' + x.t.st + '" type="button" data-act="cab-step" data-i="' + x.i + '" data-fid="t' + x.i + '" aria-label="' + esc(x.t.title) + ': ' + s[1] + '. Нажмите, чтобы сменить статус"><span class="t-title">' + x.t.title + '</span><span class="who">' + x.t.who + '</span>' + pill(s[0], s[1]) + '</button>';
-      }).join('') + '</div>';
-    }).join('');
-    var R = 54, CIR = 2 * Math.PI * R, dd = CIR * n.done / T.length, gg = CIR * n.doing / T.length;
-    return '' +
-      '<div class="head"><div><h1>Кабинет проекта</h1>' +
-      '<p class="lead">Так вы видите работу над Этапом 0: что сделано, что в работе и что ещё не начато. Нажмите на задачу, чтобы поменять её статус.</p></div>' +
-      '<button class="btn quiet sm" type="button" data-act="cab-reset" data-fid="reset">Сбросить сценарий</button></div>' +
-      '<section class="panel cab-hero"><div class="ring" role="img" aria-label="Готово ' + pd + '%"><svg viewBox="0 0 132 132"><circle class="rt" cx="66" cy="66" r="' + R + '"/><circle class="rg" cx="66" cy="66" r="' + R + '" stroke-dasharray="' + (dd + gg).toFixed(1) + ' ' + CIR.toFixed(1) + '"/><circle class="rd" cx="66" cy="66" r="' + R + '" stroke-dasharray="' + dd.toFixed(1) + ' ' + CIR.toFixed(1) + '"/></svg><b><span>' + pd + '<small>%</small></span></b></div>' +
-      '<div class="cab-stats"><div class="d"><small>Готово</small><b>' + n.done + ' из ' + T.length + '</b></div><div class="g"><small>В работе</small><b>' + n.doing + '</b></div><div class="t"><small>Не начато</small><b>' + n.todo + '</b></div>' +
-      '<p class="cap">Итог Этапа 0: письменное заключение, которое вы получаете в конце третьей недели.</p></div></section>' +
-      '<div class="row sp"><button class="chip" type="button" data-act="cab-open" data-fid="only" aria-pressed="' + C.onlyOpen + '">Показать только невыполненное</button></div>' +
-      '<div class="tl">' + html + '</div>';
+  /* ---------- экран: настройки ---------- */
+  function viewSettings() {
+    var down = S.receipts.cashDown;
+    var row = function (name, val) { return '<div class="set-row"><span>' + name + '</span>' + val + '</div>'; };
+    return head('Настройки', 'Правила обработки денег и подключения.') +
+      '<div class="grid two-eq"><section class="panel"><h2>Правила</h2><div class="stack" style="margin-top:14px">' + protectSwitch('prot-s') +
+      '<div class="set-list">' +
+      row('Выплата только при чеке самозанятого', pill('ok', 'включено')) +
+      row('Повтор пробития чека при сбое кассы', pill('ok', 'автоматически')) +
+      row('Оповещение о расхождении сверки', pill('ok', 'в рабочий чат')) + '</div></div></section>' +
+      '<section class="panel"><h2>Подключения</h2><div class="set-list" style="margin-top:14px">' +
+      row('Платёжный сервис', pill('info', 'тестовый режим')) +
+      row('Онлайн-касса', down ? pill('bad', 'не отвечает') : pill('ok', 'подключена')) +
+      row('Выплаты самозанятым, «Мой налог»', pill('ok', 'подключено')) +
+      row('Тестовые данные', '<button class="btn sm" type="button" data-act="reset-all" data-fid="reset-s">Сбросить</button>') + '</div>' +
+      '<p class="sub" style="margin-top:14px">Тестовая среда: деньги и чеки не настоящие, данные вымышленные.</p></section></div>';
   }
 
   /* ---------- действия ---------- */
   var T = function (n) { var s = 14 * 3600 + 2 * 60 + 11 + n * 7; var h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60; return [h, m, x].map(function (v) { return String(v).padStart(2, '0'); }).join(':'); };
   var A = {
-    'map-sel': function (d) { S.map.sel = d.id; },
+    'reset-all': function () { var v = S.view; initState(); S.view = v; },
     'ledger-pay': function () {
       var L = S.ledger; if (L.paid) return;
       L.paid = true; L.seq++; L.fresh = true;
@@ -446,7 +347,6 @@
       L.rows.push({ t: T(L.seq), ev: 'Сторно дубля', key: 'storno_2841_01', amt: -12400, kind: 'storno' });
       L.msg = { kind: 'ok', text: '<b>Дубль исправлен новой строкой.</b> Исходные строки остались как были, расхождение закрыто.' };
     },
-    'ledger-reset': function () { S.ledger = { protect: true, paid: false, rows: D.ledgerStart.map(function (r) { return Object.assign({}, r); }), msg: null, fresh: false, seq: 0 }; },
 
     'rc-sel': function (d) { S.receipts.sel = d.id; S.receipts.print = true; },
     'rc-down': function () { S.receipts.cashDown = !S.receipts.cashDown; S.receipts.print = false; },
@@ -479,7 +379,6 @@
         ? { kind: 'ok', text: '<b>Возврат оформлен, чек возврата ФД ' + rec.fd + ' привязан к чеку ФД ' + orig.fd + '.</b>' }
         : { kind: 'bad', text: '<b>Деньги возвращены, чека возврата нет.</b> Операция в очереди на повтор.' };
     },
-    'rc-reset': function () { S.receipts = { cashDown: false, fd: 1042, list: D.receiptsStart.map(function (r) { return Object.assign({}, r); }), sel: 'r3', orderState: 'new', msg: null, print: false }; },
 
     'po-sel': function (d) { S.payouts.sel = +d.i; },
     'po-check': function (d) {
@@ -493,7 +392,6 @@
       r.paid = true; r.payId = 'po_' + r.order + '_01';
       P.msg = { kind: 'ok', text: '<b>Выплата проведена:</b> ' + rub(split(r.gross).seller) + ', ключ ' + r.payId + '.' };
     },
-    'po-reset': function () { S.payouts = { rows: D.payoutsStart.map(function (r) { return Object.assign({}, r); }), sel: 3, msg: null }; },
 
     'rc-open': function (d) { S.recon.open = S.recon.open === +d.id ? null : +d.id; },
     'rc-apply': function (d) {
@@ -502,22 +400,11 @@
       var left = R.rows.filter(function (x) { return x.issue && !x.done; }).length;
       R.msg = left ? { kind: 'ok', text: '<b>Расхождение по заказу №' + r.id + ' закрыто.</b> Осталось разобрать: ' + left + '.' } : null;
     },
-    'recon-reset': function () { S.recon = { rows: JSON.parse(JSON.stringify(D.reconStart)), open: null, msg: null }; },
 
-    'rep-filter': function (d) { S.report.filter = d.f; },
-    'rep-pick': function (d, el) { S.report.pick[d.id] = el.checked; },
-
-    'ig-mod': function (d) { S.integ.mod = d.id; },
-    'ig-crit': function (d) { S.integ.crit[d.id] = !S.integ.crit[d.id]; },
-    'ig-phase': function (d) { S.integ.phase = +d.i; },
-
-    'cab-step': function (d) { var t = S.cabinet.tasks[+d.i]; t.st = { todo: 'doing', doing: 'done', done: 'todo' }[t.st]; },
-    'cab-open': function () { S.cabinet.onlyOpen = !S.cabinet.onlyOpen; },
-    'cab-reset': function () { S.cabinet = { tasks: D.tasks.map(function (t) { return Object.assign({}, t); }), onlyOpen: false }; }
   };
 
   /* ---------- вывод ---------- */
-  var RENDER = { map: viewMap, ledger: viewLedger, receipts: viewReceipts, payouts: viewPayouts, recon: viewRecon, report: viewReport, integration: viewIntegration, cabinet: viewCabinet };
+  var RENDER = { home: viewHome, ledger: viewLedger, receipts: viewReceipts, payouts: viewPayouts, recon: viewRecon, settings: viewSettings };
   function render(keepFocus) {
     var fid = keepFocus && document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.fid : null;
     var scroll = window.scrollY;
@@ -532,12 +419,12 @@
     // анимацию ленты запускаем один раз на действие
     if (S.receipts) S.receipts.print = false;
     if (S.ledger) S.ledger.fresh = false;
-    document.title = (VIEWS.filter(function (x) { return x.id === S.view; })[0].name) + ' · Стенд платёжного контура';
+    document.title = (VIEWS.filter(function (x) { return x.id === S.view; })[0].name) + ' · Atlas Pay';
   }
 
   function route() {
     var h = (location.hash || '').replace('#', '');
-    S.view = RENDER[h] ? h : 'map';
+    S.view = RENDER[h] ? h : 'home';
     render(false);
     var vv = $('#view'); vv.classList.remove('enter'); void vv.offsetWidth; vv.classList.add('enter');
     if (!(window.__noScroll)) window.scrollTo(0, 0);
@@ -555,6 +442,8 @@
     var el = e.target.closest('[data-act]');
     if (el && el.tagName === 'INPUT') { A[el.dataset.act](el.dataset, el); render(true); }
   });
+
+  $('#resetBtn').addEventListener('click', function () { initState(); route(); });
 
   /* ---------- тема ---------- */
   function applyTheme(t) {
